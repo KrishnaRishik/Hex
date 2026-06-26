@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>HEX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0b0a12; --void2:#070610; --panel:#15121f; --panel2:#1d1830;
+    --curse:#b9ff3d; --curse-dim:#6f9a2e; --blood:#ff3b6b; --gold:#ffcf5c;
+    --bone:#e8e2d0; --muted:#7a738f; --line:#2a2440;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--void2);overflow:hidden;font-family:'Space Mono',ui-monospace,monospace;color:var(--bone);}
+  #wrap{position:fixed;inset:0;}
+  canvas{display:block;width:100%;height:100%;background:var(--void);cursor:crosshair;}
+
+  #hud{position:fixed;inset:0;pointer-events:none;}
+  .hud-tl{position:absolute;top:14px;left:16px;display:flex;flex-direction:column;gap:8px;}
+  .stat{display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.5px;text-shadow:0 2px 6px #000;}
+  .stat .k{color:var(--muted);font-size:11px;text-transform:uppercase;}
+  .hpbar{width:190px;height:14px;background:#26121c;border:1px solid #3a1d2a;border-radius:2px;overflow:hidden;}
+  .hpfill{height:100%;background:linear-gradient(90deg,var(--blood),#ff6f93);transition:width .12s linear;}
+  .gold{color:var(--gold);font-weight:700;} .floor{color:var(--curse);font-weight:700;}
+  .hud-tr{position:absolute;top:14px;right:16px;text-align:right;font-size:12px;color:var(--muted);text-shadow:0 2px 6px #000;}
+  .hud-tr b{color:var(--bone);}
+
+  #weaponHud{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:340px;text-align:center;text-shadow:0 2px 6px #000;}
+  #wname{font-family:'Cinzel',serif;font-weight:800;font-size:18px;letter-spacing:1.5px;color:var(--bone);text-transform:uppercase;}
+  #wsub{font-size:11px;color:var(--muted);margin-top:1px;margin-bottom:7px;}
+  .fusewrap{position:relative;height:20px;background:#161421;border:1px solid var(--line);border-radius:3px;overflow:hidden;}
+  .fusefill{position:absolute;inset:0;width:100%;transform-origin:left;background:linear-gradient(90deg,var(--curse-dim),var(--curse));}
+  .fuse-label{position:relative;z-index:2;font-size:12px;font-weight:700;line-height:20px;color:#0b0a12;letter-spacing:1px;mix-blend-mode:hard-light;}
+  .fuse-danger .fusefill{background:linear-gradient(90deg,#a31330,var(--blood));}
+  .fuse-shake{animation:fz .09s infinite;}
+  @keyframes fz{0%{transform:translate(-1px,0)}50%{transform:translate(1px,1px)}100%{transform:translate(0,-1px)}}
+
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(120% 90% at 50% 18%,rgba(20,18,34,.86),rgba(7,6,16,.97));backdrop-filter:blur(2px);text-align:center;padding:24px;z-index:20;}
+  .hidden{display:none!important;}
+  .title{font-family:'Cinzel',serif;font-weight:800;font-size:clamp(40px,9vw,84px);line-height:.95;letter-spacing:4px;color:var(--bone);text-shadow:0 0 26px rgba(185,255,61,.25),0 6px 0 #000;}
+  .title .c{color:var(--curse);}
+  .tag{margin-top:14px;color:var(--muted);max-width:560px;font-size:14px;line-height:1.6;} .tag b{color:var(--bone);}
+  .daily{margin-top:18px;padding:10px 16px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.25);font-size:12px;}
+  .daily .lbl{color:var(--curse);letter-spacing:2px;font-size:10px;text-transform:uppercase;}
+  .daily .name{font-family:'Cinzel',serif;color:var(--bone);font-size:16px;margin-top:2px;}
+  .daily .pb{color:var(--muted);margin-top:3px;}
+  .btnrow{margin-top:26px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;pointer-events:auto;}
+  button{font-family:'Space Mono',monospace;font-weight:700;font-size:14px;letter-spacing:1px;color:var(--void);background:var(--curse);border:none;padding:14px 26px;border-radius:3px;cursor:pointer;text-transform:uppercase;box-shadow:0 0 0 1px #000,0 8px 22px rgba(185,255,61,.18);transition:transform .08s,box-shadow .12s;}
+  button:hover{transform:translateY(-1px);box-shadow:0 0 0 1px #000,0 10px 28px rgba(185,255,61,.32);}
+  button:focus-visible{outline:3px solid var(--bone);outline-offset:2px;}
+  button.ghost{background:transparent;color:var(--bone);border:1px solid var(--line);box-shadow:none;}
+  button.ghost:hover{border-color:var(--curse);color:var(--curse);}
+  .controls{margin-top:22px;color:var(--muted);font-size:11px;line-height:1.9;letter-spacing:.5px;}
+  .controls kbd{display:inline-block;min-width:20px;padding:1px 6px;background:#11101b;border:1px solid var(--line);border-radius:3px;color:var(--bone);font-size:11px;}
+  .ledger{margin-top:16px;font-size:11px;color:var(--muted);max-width:480px;line-height:1.7;}
+  .sum-floor{font-family:'Cinzel',serif;font-size:clamp(30px,7vw,60px);color:var(--curse);margin-top:4px;}
+  .sum-grid{display:grid;grid-template-columns:repeat(3,minmax(90px,1fr));gap:14px;margin-top:20px;max-width:420px;}
+  .sum-cell{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:4px;padding:12px 8px;}
+  .sum-cell .v{font-size:22px;font-weight:700;color:var(--bone);} .sum-cell .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;}
+  .next{margin-top:22px;padding:14px 18px;border:1px solid var(--curse-dim);border-radius:5px;background:rgba(111,154,46,.10);max-width:460px;}
+  .next .lbl{font-size:10px;letter-spacing:2px;color:var(--curse);text-transform:uppercase;} .next .txt{margin-top:5px;font-size:14px;color:var(--bone);line-height:1.5;} .next .txt b{color:var(--curse);}
+  .unlock-pop{color:var(--gold);font-weight:700;letter-spacing:1px;margin-top:6px;}
+  .mobile-note{position:fixed;bottom:8px;left:0;right:0;text-align:center;color:var(--muted);font-size:10px;pointer-events:none;}
+  .flash-msg{position:fixed;left:50%;top:16%;transform:translateX(-50%);font-family:'Cinzel',serif;font-size:24px;letter-spacing:2px;text-shadow:0 2px 12px #000;z-index:15;opacity:0;pointer-events:none;}
+  @media (prefers-reduced-motion: reduce){.fuse-shake{animation:none}}
+
+  /* inventory queue slots */
+  #queueRow{display:flex;gap:6px;justify-content:center;margin-bottom:7px;}
+  .qslot{width:30px;height:30px;border:1px solid var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;
+    font-size:15px;background:rgba(0,0,0,.3);color:var(--muted);}
+  .qslot.filled{border-color:currentColor;background:rgba(185,255,61,.06);}
+  .qslot .num{position:absolute;font-size:8px;}
+
+  /* gold pill + shop */
+  .goldpill{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid #5a4a1e;border-radius:20px;
+    background:rgba(255,207,92,.08);color:var(--gold);font-weight:700;font-size:14px;}
+  .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;width:min(720px,92vw);margin-top:16px;
+    max-height:46vh;overflow-y:auto;padding:2px;}
+  .card{border:1px solid var(--line);border-radius:6px;background:var(--panel2);padding:11px 12px;text-align:left;display:flex;flex-direction:column;gap:5px;pointer-events:auto;}
+  .card .cn{font-family:'Cinzel',serif;font-weight:800;font-size:13px;display:flex;align-items:center;gap:7px;}
+  .card .cg{font-size:16px;}
+  .card .cs{font-size:10px;color:var(--muted);line-height:1.4;min-height:26px;}
+  .card .cstat{font-size:10px;color:var(--bone);opacity:.8;}
+  .card button{margin-top:4px;padding:7px;font-size:12px;}
+  .card button:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:0 0 0 1px #000;}
+  .card.ai{border-color:var(--curse-dim);background:rgba(111,154,46,.08);}
+  .shop-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;}
+  .loadout{margin-top:14px;font-size:12px;color:var(--muted);}
+  .loadout b{color:var(--bone);}
+  .crossroads .title{font-size:clamp(26px,6vw,48px);}
+  .howbtn{background:none;border:none;box-shadow:none;color:var(--curse);font-family:'Space Mono',monospace;
+    font-size:12px;letter-spacing:1px;text-transform:none;cursor:pointer;padding:6px 2px;margin-top:2px;pointer-events:auto;}
+  .howbtn:hover{transform:none;box-shadow:none;text-decoration:underline;}
+  .howdetail{max-width:560px;}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game"></canvas></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-tl">
+    <div class="stat"><span class="k">HP</span><div class="hpbar"><div class="hpfill" id="hpfill"></div></div></div>
+    <div class="stat"><span class="k">Depth</span><span class="floor" id="floorN">1</span>
+      <span class="k" style="margin-left:14px">Gold</span><span class="gold" id="goldN">0</span></div>
+  </div>
+  <div class="hud-tr">Score <b id="scoreN">0</b><br><span id="enemiesN" style="color:var(--blood);font-weight:700"></span><br><span id="modeTag" style="color:var(--curse)"></span></div>
+  <div id="weaponHud">
+    <div id="queueRow"></div>
+    <div id="wname">CURSED SPARK</div>
+    <div id="wsub">grab merchandise to arm yourself</div>
+    <div class="fusewrap" id="fusewrap"><div class="fusefill" id="fusefill"></div><div class="fuse-label" id="fuselabel">FUSE 0 / 0</div></div>
+  </div>
+</div>
+
+<div class="flash-msg" id="flashMsg"></div>
+
+<div class="screen" id="titleScreen">
+  <h1 class="title">HE<span class="c">X</span></h1>
+  <p class="tag" id="taglineShort">A cave-diving roguelite of <b>disposable power</b>. Every weapon rides a burning fuse — fire it dry and the next curse takes over. <b>Go deeper. Get weirder.</b></p>
+  <button class="howbtn" id="howBtn">▸ How it works</button>
+  <div class="howdetail hidden" id="howDetail">
+    <p class="tag" style="margin-top:0">Drop through procedurally-generated caves grabbing volatile curses. Each rides a fuse that burns down as you fire; when it hits zero, the next curse in your 3-slot queue takes over — and if you're empty-handed, it backfires and a fresh weapon is conjured on the spot. Clear every floor, spend your gold at the market between depths, and keep descending. Nothing you hold is stable.</p>
+  </div>
+  <div class="daily" id="dailyBox">
+    <div class="lbl">Today's Curse · Daily Seed</div>
+    <div class="name" id="dailyName">—</div>
+    <div class="pb" id="dailyPB">Best today: not run yet</div>
+  </div>
+  <div class="btnrow">
+    <button id="playBtn">Enter the Hex</button>
+    <button class="ghost" id="shopBtn">Shop</button>
+    <button class="ghost" id="dailyBtn">Run Daily Curse</button>
+  </div>
+  <div style="margin-top:14px"><span class="goldpill">◈ <span id="bankGold">0</span> gold banked</span></div>
+  <div class="controls">
+    <kbd>A</kbd><kbd>D</kbd> / <kbd>←→</kbd> move &nbsp;·&nbsp; <kbd>Space</kbd> / <kbd>↑</kbd> jump <b style="color:var(--bone)">(×2 = double jump)</b> &nbsp;·&nbsp; <b style="color:var(--bone)">click</b> or <kbd>K</kbd> shoot
+    &nbsp;·&nbsp; <kbd>↓</kbd> drop through ledges &nbsp;·&nbsp; clear the floor, reach <span style="color:var(--curse)">▼</span> below &nbsp;·&nbsp; <kbd>P</kbd> pause
+  </div>
+  <div class="ledger" id="ledgerLine"></div>
+</div>
+
+<div class="screen hidden" id="pauseScreen">
+  <h1 class="title">PAUSED</h1>
+  <div class="btnrow"><button id="resumeBtn">Resume</button><button class="ghost" id="quitBtn">Abandon Run</button></div>
+</div>
+
+<div class="screen hidden" id="summaryScreen">
+  <div style="color:var(--muted);letter-spacing:3px;font-size:12px;text-transform:uppercase" id="sumHead">The hex took you</div>
+  <div class="sum-floor" id="sumFloor">DEPTH 1</div>
+  <div class="unlock-pop hidden" id="unlockPop"></div>
+  <div class="sum-grid">
+    <div class="sum-cell"><div class="v" id="sumKills">0</div><div class="l">Kills</div></div>
+    <div class="sum-cell"><div class="v" id="sumGold">0</div><div class="l">Gold</div></div>
+    <div class="sum-cell"><div class="v" id="sumScore">0</div><div class="l">Score</div></div>
+  </div>
+  <div class="next"><div class="lbl">Why come back</div><div class="txt" id="nextTxt"></div></div>
+  <div class="ledger" id="sumLedger"></div>
+  <div class="btnrow"><button id="againBtn">Run Again</button><button class="ghost" id="menuBtn">Main Menu</button></div>
+</div>
+
+<div class="screen hidden crossroads" id="crossScreen">
+  <div style="color:var(--muted);letter-spacing:3px;font-size:12px;text-transform:uppercase">Floor cleared</div>
+  <h1 class="title" id="crossDepth">DEPTH 3</h1>
+  <div style="margin-top:10px"><span class="goldpill">◈ <span id="crossGold">0</span> gold</span></div>
+  <p class="tag" style="margin-top:16px">The market beckons. Spend your gold on cursed merchandise, or press on into the dark.</p>
+  <div class="btnrow">
+    <button id="crossShopBtn">Open Shop</button>
+    <button class="ghost" id="crossDescendBtn">Descend Deeper ▼</button>
+  </div>
+</div>
+
+<div class="screen hidden" id="shopScreen">
+  <div class="shop-head">
+    <h1 class="title" style="font-size:clamp(26px,6vw,46px)">THE <span class="c">SHOP</span></h1>
+    <span class="goldpill">◈ <span id="shopGold">0</span> gold</span>
+  </div>
+  <p class="tag" style="margin-top:6px" id="shopHint">Buy curses to stock your run. Bought curses queue up; the first becomes your starting weapon.</p>
+  <div class="shop-grid" id="shopGrid"></div>
+  <div class="loadout" id="shopLoadout"></div>
+  <div class="btnrow">
+    <button id="shopRerollBtn" class="ghost">Reroll stock (◈25)</button>
+    <button id="shopDoneBtn">Done</button>
+  </div>
+</div>
+
+<div class="mobile-note" id="mobileNote"></div>
+
+<script>
+"use strict";
+/* =======================================================================
+   HEX — vertical-descent cave platformer roguelite.
+   Gravity + jump. Drop through caves, grab cursed weapons on a fuse,
+   clear each floor, descend. Single self-contained file, no assets.
+   ======================================================================= */
+
+/* ---------------- persistence / metagame (D1 hook) ---------------- */
+const SAVE_KEY="cursedmarket.save.v2";
+const defaultSave={deepest:0,runs:0,unlocks:[],daily:{},gold:0};
+function loadSave(){ try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));return s?{...defaultSave,...s}:{...defaultSave};}catch(e){return {...defaultSave};} }
+function writeSave(s){ try{localStorage.setItem(SAVE_KEY,JSON.stringify(s));}catch(e){} }
+let SAVE=loadSave();
+const UNLOCKS=[
+  {floor:1,id:"market_pass",name:"Market Pass",desc:"You survived your first descent. The market knows your name now."},
+  {floor:3,id:"twin_fuse",name:"Twin Fuse",desc:"Start runs with +30% longer fuses on every weapon."},
+  {floor:5,id:"haggler",name:"Haggler's Coin",desc:"Enemies drop 50% more gold."},
+  {floor:8,id:"recycler",name:"Recycler's Curse",desc:"Fuse-ends explode less often — they mutate instead."},
+  {floor:12,id:"deep_walker",name:"Deep Walker",desc:"Start every run with +1 max HP heart."},
+];
+function nextUnlock(){ return UNLOCKS.find(u=>u.floor>SAVE.deepest); }
+function hasUnlock(id){ return SAVE.unlocks.includes(id); }
+
+/* ---------------- seeded RNG ---------------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+let rng=Math.random;
+function rand(a=1,b){const r=rng();return b===undefined?r*a:a+r*(b-a);}
+function randint(a,b){return Math.floor(rand(a,b+1));}
+function pick(arr){return arr[Math.floor(rng()*arr.length)];}
+function dailySeed(){const d=new Date();return (d.getFullYear()*372)+(d.getMonth()*31)+d.getDate();}
+function dailyKey(){const d=new Date();return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;}
+
+/* ---------------- canvas ---------------- */
+const cv=document.getElementById("game"), ctx=cv.getContext("2d");
+let VW=0,VH=0,DPR=1;
+function resize(){DPR=Math.min(window.devicePixelRatio||1,2);VW=window.innerWidth;VH=window.innerHeight;cv.width=Math.floor(VW*DPR);cv.height=Math.floor(VH*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener("resize",resize);resize();
+
+/* ---------------- constants ---------------- */
+const TILE=34;
+const GW=58, GH=42;                 // wide, open cave — extends left/right and down
+const PLAYER_R=11, GRAV=1450, MAXFALL=600;
+const MOVE=235, JUMPVEL=565, COYOTE=0.10, JUMPBUF=0.11;
+const WORLD_W=GW*TILE, WORLD_H=GH*TILE;
+
+/* ---------------- weapon catalogue ---------------- */
+const WEAPONS=[
+  {id:"musket",name:"Cursed Musket",glyph:"†",col:"#ffd27a",dmg:34,rate:560,spd:9.5,r:5,fuse:8,sub:"slow · brutal slug"},
+  {id:"firewand",name:"Ember Wand",glyph:"✦",col:"#ff8a3b",dmg:9,rate:120,spd:8,r:4,fuse:24,sub:"fast spitfire"},
+  {id:"bomblauncher",name:"Bomb Bolt",glyph:"◉",col:"#ff6f4d",dmg:22,rate:600,spd:7,r:7,fuse:6,sub:"area blast",aoe:54},
+  {id:"poisondart",name:"Venom Darter",glyph:"➶",col:"#9dff5a",dmg:6,rate:200,spd:9,r:3,fuse:16,sub:"stacks poison",poison:5},
+  {id:"chaosorb",name:"Chaos Orb",glyph:"๑",col:"#c46bff",dmg:16,rate:360,spd:6.5,r:6,fuse:10,sub:"bounces off rock",bounce:4},
+  {id:"voidneedle",name:"Void Needle",glyph:"|",col:"#7df0ff",dmg:13,rate:170,spd:12,r:3,fuse:14,sub:"pierces everything",pierce:true},
+  {id:"thunder",name:"Thunder Staff",glyph:"ϟ",col:"#fff27a",dmg:18,rate:470,spd:11,r:4,fuse:9,sub:"zaps an area",aoe:40},
+  {id:"fungus",name:"Fungus Bomb",glyph:"❀",col:"#7bd96b",dmg:8,rate:660,spd:6,r:7,fuse:5,sub:"poison cloud",cloud:true,poison:4},
+  {id:"frost",name:"Frost Shard",glyph:"❄",col:"#9ec9ff",dmg:11,rate:240,spd:9,r:4,fuse:13,sub:"slows on hit",slow:1.7},
+  {id:"scatter",name:"Scatter Hex",glyph:"※",col:"#ffa6c4",dmg:7,rate:520,spd:8.5,r:3,fuse:7,sub:"5-pellet spread",pellets:5,spread:0.5},
+  {id:"leech",name:"Leech Ray",glyph:"♥",col:"#ff5b8a",dmg:9,rate:230,spd:13,r:3,fuse:11,sub:"heals on hit",pierce:true,leech:2},
+  {id:"boomer",name:"Hex Boomerang",glyph:"⟳",col:"#ffd95b",dmg:15,rate:520,spd:8,r:5,fuse:10,sub:"flies out & returns",boomer:true,pierce:true},
+];
+const SPARK={id:"spark",name:"Cursed Spark",glyph:"·",col:"#9aa0b8",dmg:4,rate:300,spd:8,r:3,fuse:9999,sub:"a dying ember"};
+function makeWeapon(def){return {def,charge:def.fuse,lastFire:0};}
+function randomWeaponDef(exclude){let d,g=0;do{d=WEAPONS[Math.floor(rng()*WEAPONS.length)];g++;}while(exclude&&d.id===exclude.id&&g<8);return d;}
+
+/* ============================================================
+   AI-CONJURED WEAPONS  (AI as a game mechanic, not just a tool)
+   Found/starting weapons come from the curated pool above.
+   But when the curse MUTATES a weapon, it conjures one from AI:
+     • Ships working out of the box from a baked, AI-generated batch.
+     • If AI_ENDPOINT is set, it generates brand-new weapons LIVE,
+       async-buffered so there's never a mid-fight stall, schema-
+       validated for balance + safety, with the baked batch as a
+       graceful fallback whenever a call is slow, fails, or absent.
+   ============================================================ */
+const AI_ENDPOINT = "";   // ← paste your Cloudflare Worker URL to enable LIVE generation; empty = baked batch
+
+// AI-pre-generated batch (authored by the model, embedded for zero-dependency play)
+const AI_WEAPONS = [
+  {name:"Gravewhistle",glyph:"♪",col:"#9dff5a",dmg:7,rate:150,spd:10,r:3,fuse:18,poison:4,sub:"a tune that rots what hears it"},
+  {name:"Mirrorfang",glyph:"◇",col:"#7df0ff",dmg:12,rate:200,spd:12,r:3,fuse:13,pierce:true,sub:"splits the air, then the flesh behind it"},
+  {name:"Dreadcomet",glyph:"☄",col:"#ff8a3b",dmg:24,rate:620,spd:7,r:7,fuse:6,aoe:52,sub:"a falling star with a grudge"},
+  {name:"Lurchorb",glyph:"๑",col:"#c46bff",dmg:15,rate:360,spd:6.5,r:6,fuse:10,bounce:4,sub:"it wants out of this room"},
+  {name:"Sanguine Kiss",glyph:"♥",col:"#ff5b8a",dmg:9,rate:220,spd:13,r:3,fuse:11,pierce:true,leech:2,sub:"takes a sip on the way through"},
+  {name:"Frostgrudge",glyph:"❄",col:"#9ec9ff",dmg:11,rate:240,spd:9,r:4,fuse:13,slow:1.8,sub:"old, cold, and patient"},
+  {name:"Sporecough",glyph:"❀",col:"#7bd96b",dmg:8,rate:640,spd:6,r:7,fuse:5,cloud:true,poison:4,sub:"blooms where you'd rather it didn't"},
+  {name:"Returning Regret",glyph:"⟳",col:"#ffd95b",dmg:15,rate:520,spd:8,r:5,fuse:10,boomer:true,pierce:true,sub:"comes back like a bad decision"},
+  {name:"Stormtongue",glyph:"ϟ",col:"#fff27a",dmg:18,rate:470,spd:11,r:4,fuse:9,aoe:40,sub:"speaks only in lightning"},
+  {name:"Boneflute Volley",glyph:"‡",col:"#ffd27a",dmg:30,rate:560,spd:9.5,r:5,fuse:8,sub:"one loud, final note"},
+  {name:"Wraithneedle",glyph:"|",col:"#b8a6ff",dmg:13,rate:170,spd:12,r:3,fuse:14,pierce:true,sub:"threads clean through the dead"},
+  {name:"Cinderveil",glyph:"✸",col:"#ff6f4d",dmg:9,rate:130,spd:8,r:4,fuse:22,sub:"a curtain of small fires"},
+  {name:"Saltcrack",glyph:"❂",col:"#e8e2d0",dmg:20,rate:500,spd:11,r:4,fuse:9,aoe:36,sub:"the ground forgets to hold"},
+  {name:"Venomous Choir",glyph:"✺",col:"#9dff5a",dmg:5,rate:420,spd:8,r:3,fuse:9,pellets:5,spread:0.5,poison:3,sub:"five mouths, one poison"},
+  {name:"Glasswing",glyph:"◆",col:"#7df0ff",dmg:14,rate:250,spd:12,r:4,fuse:12,pierce:true,slow:1.3,sub:"cuts cold and slow"},
+  {name:"Leechlight",glyph:"✦",col:"#ff5b8a",dmg:8,rate:200,spd:13,r:3,fuse:10,pierce:true,leech:3,sub:"drinks the glow from things"},
+  {name:"Bramble Boomerang",glyph:"⟳",col:"#9dff5a",dmg:12,rate:480,spd:8,r:5,fuse:10,boomer:true,poison:3,sub:"thorns going and coming"},
+  {name:"Ashcaller",glyph:"☄",col:"#ff8a3b",dmg:20,rate:600,spd:6,r:7,fuse:6,aoe:54,cloud:true,poison:3,sub:"fire now, fumes after"},
+  {name:"Quicksilver Spite",glyph:"✷",col:"#cfd3ff",dmg:7,rate:110,spd:9,r:3,fuse:24,sub:"faster than your regret"},
+  {name:"Doomtick",glyph:"⌖",col:"#ffcf5c",dmg:16,rate:360,spd:10,r:4,fuse:7,bounce:3,sub:"counts down off the walls"},
+  {name:"Marrowlance",glyph:"‡",col:"#ffd27a",dmg:28,rate:540,spd:10,r:5,fuse:8,pierce:true,sub:"straight through, no apology"},
+  {name:"Witchfire Fan",glyph:"✸",col:"#ff6f4d",dmg:7,rate:500,spd:8.5,r:3,fuse:7,pellets:6,spread:0.6,sub:"a hand of small infernos"},
+  {name:"Numbing Hex",glyph:"❄",col:"#9ec9ff",dmg:9,rate:220,spd:9,r:4,fuse:13,slow:2.2,sub:"the cold that makes you slow"},
+  {name:"Plaguebloom",glyph:"❀",col:"#7bd96b",dmg:7,rate:660,spd:6,r:7,fuse:5,cloud:true,poison:5,sub:"a garden that hates visitors"},
+  {name:"Last Laugh",glyph:"⁂",col:"#ffa6c4",dmg:6,rate:480,spd:8.5,r:3,fuse:6,pellets:5,spread:0.55,leech:1,sub:"takes a little with every giggle"},
+  {name:"Gloomdart",glyph:"➶",col:"#9dff5a",dmg:6,rate:190,spd:9,r:3,fuse:16,poison:5,sub:"tip dipped in something patient"},
+  {name:"Hollowpoint Hex",glyph:"◉",col:"#ff6f4d",dmg:22,rate:600,spd:7,r:6,fuse:6,aoe:48,sub:"blooms inward"},
+  {name:"Static Wail",glyph:"ϟ",col:"#fff27a",dmg:14,rate:300,spd:12,r:3,fuse:11,aoe:30,pierce:true,sub:"a scream with reach"},
+];
+
+const AI_GLYPHS="✦✧❂❉◆◇☄✸✷✺❖⌖†‡※❀❄♥⟳◉➶๑|ϟ♪⁂".split("");
+let aiBuffer=[], aiFetching=false, aiCounter=0;
+
+// schema validation: clamp every field into safe, balanced, renderable ranges
+function validateAIWeapon(o){
+  if(!o || typeof o!=="object") return null;
+  const num=(v,lo,hi,d)=>{ v=Number(v); return isFinite(v)?Math.max(lo,Math.min(hi,v)):d; };
+  let glyph=(""+(o.glyph||"")).trim();
+  if([...glyph].length!==1 || !AI_GLYPHS.includes(glyph)) glyph=AI_GLYPHS[Math.floor(rng()*AI_GLYPHS.length)];
+  let col=(""+(o.col||"")).trim();
+  if(!/^#[0-9a-fA-F]{6}$/.test(col)) col=["#b9ff3d","#ff8a3b","#7df0ff","#c46bff","#ff5b8a","#9dff5a","#fff27a"][Math.floor(rng()*7)];
+  const def={ id:"ai_"+(aiCounter++), _ai:true,
+    name:(""+(o.name||"Cursed Oddity")).slice(0,24), glyph, col,
+    dmg:num(o.dmg,4,40,12), rate:num(o.rate,100,700,300), spd:num(o.spd,5,13,9),
+    r:num(o.r,3,8,4), fuse:Math.round(num(o.fuse,4,26,10)),
+    sub:(""+(o.sub||"freshly conjured, barely stable")).slice(0,46) };
+  if(o.pierce) def.pierce=true;
+  const bounce=Math.round(num(o.bounce,0,5,0)); if(bounce>0) def.bounce=bounce;
+  const aoe=Math.round(num(o.aoe,0,60,0)); if(aoe>0) def.aoe=aoe;
+  const poison=Math.round(num(o.poison,0,8,0)); if(poison>0) def.poison=poison;
+  const slow=Math.round(num(o.slow,0,2.5,0)*10)/10; if(slow>0) def.slow=slow;
+  const leech=Math.round(num(o.leech,0,3,0)); if(leech>0) def.leech=leech;
+  const pellets=Math.round(num(o.pellets,1,7,1)); if(pellets>1){ def.pellets=pellets; def.spread=num(o.spread,0.2,1,0.5); }
+  if(o.cloud){ def.cloud=true; if(!def.poison) def.poison=3; }
+  if(o.boomer) def.boomer=true;
+  return def;
+}
+
+// what the curse hands you on mutation: live AI if buffered, else baked AI batch
+function nextMutationWeapon(exclude){
+  if(!(G&&G.daily) && aiBuffer.length){ const w=aiBuffer.shift(); if(w) return w; }
+  let d,g=0; do{ d=AI_WEAPONS[Math.floor(rng()*AI_WEAPONS.length)]; g++; }while(exclude&&d.name===exclude.name&&g<8);
+  return {...d, id:"aibaked_"+(aiCounter++), _ai:true};
+}
+
+// top up the live buffer in the background (no-op offline / in daily mode)
+async function requestAIRefill(){
+  if(!AI_ENDPOINT || aiFetching || (G&&G.daily) || aiBuffer.length>=4) return;
+  aiFetching=true;
+  try{
+    const res=await fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:3})});
+    if(res.ok){ const data=await res.json(); const arr=Array.isArray(data)?data:(data.weapons||[]);
+      for(const o of arr){ const w=validateAIWeapon(o); if(w) aiBuffer.push(w); } }
+  }catch(e){ /* offline or endpoint down → baked batch covers it */ }
+  aiFetching=false;
+}
+
+/* ---------------- state ---------------- */
+let G=null, running=false, paused=false, lastT=0;
+const keys={}; const mouse={x:0,y:0,down:false,lastMove:0};
+let pendingLoadout=[];   // curses bought in the menu shop, used as next run's starting loadout
+
+function equipWeapon(def){
+  const w=makeWeapon(def);
+  if(hasUnlock("twin_fuse")) w.charge=Math.round(w.charge*1.3);
+  G.player.weapon=w;
+}
+
+function newGame(daily){
+  rng = daily? mulberry32(dailySeed()) : Math.random;
+  // starting weapon + queue: a bought loadout (normal mode only) wins, else random/daily
+  let startDef=null, startQueue=[];
+  if(!daily && pendingLoadout.length){ startDef=pendingLoadout[0]; startQueue=pendingLoadout.slice(1,4); }
+  pendingLoadout=[];
+  const startW = makeWeapon(startDef || (daily? WEAPONS.find(w=>w.id===dailyWeaponId()) : randomWeaponDef()));
+  if(hasUnlock("twin_fuse")) startW.charge=Math.round(startW.charge*1.3);
+  const maxHp=6+(hasUnlock("deep_walker")?1:0);
+  G={ daily:!!daily, floor:1, gold:0, kills:0, score:0,
+    player:{x:0,y:0,vx:0,vy:0,r:PLAYER_R,hp:maxHp,maxHp,weapon:startW,queue:startQueue.slice(),facing:1,onGround:false,groundType:0,
+            lastGround:-9,jumpBuf:0,prevJump:false,jumps:2,dropThrough:0,invuln:0,hitFlash:0,aimx:1,aimy:0,squash:0},
+    enemies:[],shots:[],eshots:[],pickups:[],clouds:[],parts:[],blasts:[],drips:[],
+    grid:null,platforms:[],exit:null,stairsOpen:false,shake:0,t:0,descendCD:0 };
+  buildFloor();
+  requestAIRefill();   // pre-warm live AI weapons (if an endpoint is configured)
+}
+
+/* ---------------- cave generation (vertical shaft) ---------------- */
+/* double-jump-aware reachability: the set of open cells the player can truly get to.
+   Conservative model (a subset of real capability), so anything we keep is guaranteed reachable:
+   - drift/walk to any horizontally-adjacent open cell, fall straight down
+   - from a foothold, jump/double-jump up a clear column, then drift along a clear landing row */
+function jumpReach(g, sx, sy){
+  const passable=(x,y)=> x>=0&&y>=0&&x<GW&&y<GH && (g[y][x]===0||g[y][x]===2);
+  const grounded=(x,y)=>{ const b=(y+1<GH)?g[y+1][x]:1; return b===1||b===3||b===2; };
+  const R=g.map(r=>r.map(()=>false));
+  const q=[[sx,sy]]; R[sy][sx]=true;
+  const push=(x,y)=>{ if(passable(x,y)&&!R[y][x]){ R[y][x]=true; q.push([x,y]); } };
+  const UPMAX=4;                 // ~ground jump + air jump, kept conservative
+  while(q.length){
+    const [x,y]=q.shift();
+    push(x+1,y); push(x-1,y); push(x,y+1);
+    if(grounded(x,y)){
+      for(let h=1;h<=UPMAX;h++){
+        if(!passable(x,y-h)) break;            // need a clear column to rise through
+        const W=Math.max(0,5-h);               // higher = less horizontal reach
+        for(let dx=-W;dx<=W;dx++){
+          let ok=true; const step=dx>0?1:-1;
+          for(let cx=x+step; dx!==0 && cx!==x+dx+step; cx+=step){ if(!passable(cx,y-h)){ ok=false; break; } }
+          if(ok) push(x+dx,y-h);
+        }
+      }
+    }
+  }
+  return R;
+}
+
+function buildFloor(){
+  const gen=genCave();
+  const grid=gen.grid, spawn=gen.spawn;
+  G.grid=grid;
+  const standable=(x,y)=> (x>0&&y>0&&x<GW&&y<GH-1) && grid[y][x]===0 && (grid[y+1][x]===1||grid[y+1][x]===3||grid[y+1][x]===2);
+
+  G.enemies.length=0;G.shots.length=0;G.eshots.length=0;G.pickups.length=0;G.clouds.length=0;G.parts.length=0;G.blasts.length=0;G.drips.length=0;
+  G.player.x=spawn.x*TILE+TILE/2; G.player.y=spawn.y*TILE+TILE/2-2; G.player.vx=0; G.player.vy=0;
+
+  // every open cell is reachable now, so exit = deepest standable (biased far horizontally)
+  let exitCell=null, best=-1;
+  for(let y=spawn.y+6;y<GH-1;y++)for(let x=2;x<GW-2;x++){
+    if(standable(x,y)){ const sc=y*1000+Math.abs(x-spawn.x); if(sc>best){ best=sc; exitCell={x,y}; } }
+  }
+  if(!exitCell) exitCell={x:spawn.x,y:GH-3};
+  G.exit={x:exitCell.x*TILE+TILE/2, y:exitCell.y*TILE+TILE/2};
+
+  // standable spots for enemies & loot (all guaranteed reachable), away from spawn
+  const spots=[];
+  for(let y=3;y<GH-1;y++)for(let x=2;x<GW-2;x++){
+    if(standable(x,y) && Math.hypot(x-spawn.x,y-spawn.y)>6) spots.push({x,y});
+  }
+  const count=Math.min(5+Math.floor(G.floor*1.5),18);
+  let placed=0,guard=0;
+  while(placed<count && guard<600){
+    guard++;
+    const useFly=(G.floor>=2)&&rng()<0.38;
+    if(useFly){ const c=openCell(4); if(c){ spawnEnemy(c.x,c.y,true); placed++; } }
+    else if(spots.length){ const s=pick(spots); spawnEnemy(s.x*TILE+TILE/2, s.y*TILE+TILE/2-2, false); placed++; }
+    else { const c=openCell(4); if(c){ spawnEnemy(c.x,c.y,true); placed++; } }
+  }
+  const drops=2+(G.floor>3?1:0);
+  for(let i=0;i<drops && spots.length;i++){ const s=pick(spots); G.pickups.push({x:s.x*TILE+TILE/2,y:s.y*TILE+TILE/2-4,def:randomWeaponDef(G.player.weapon.def),t:rng()*6,vy:0}); }
+
+  G.descendCD=0.4; G.stairsOpen=(G.enemies.length===0);
+  flash(`DEPTH ${G.floor}`,"#b9ff3d");
+}
+
+function genCave(){
+  for(let attempt=0; attempt<18; attempt++){
+    let g=[];
+    for(let y=0;y<GH;y++){ g[y]=[]; for(let x=0;x<GW;x++){
+      g[y][x] = (x<2||y<2||x>=GW-2||y>=GH-3) ? 1 : (rng()<0.45?1:0);
+    }}
+    for(let it=0;it<5;it++){
+      const n=g.map(r=>r.slice());
+      for(let y=1;y<GH-1;y++)for(let x=1;x<GW-1;x++){
+        let w=0; for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++) if(dx||dy) w+=g[y+dy][x+dx];
+        n[y][x]=(w>=5)?1:0;
+        if(x<2||y<2||x>=GW-2||y>=GH-3) n[y][x]=1;
+      }
+      g=n;
+    }
+    for(let x=0;x<GW;x++){ g[0][x]=1; g[1][x]=1; g[GH-1][x]=1; g[GH-2][x]=1; }
+    // keep only the largest 4-connected cavern
+    const seen=g.map(r=>r.map(()=>false)); let bestSet=null, bestSize=0;
+    for(let y=1;y<GH-1;y++)for(let x=1;x<GW-1;x++){
+      if(g[y][x]===0 && !seen[y][x]){ const cells=[], st=[[x,y]]; seen[y][x]=true;
+        while(st.length){ const [cx,cy]=st.pop(); cells.push([cx,cy]);
+          for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const nx=cx+dx,ny=cy+dy;
+            if(nx>0&&ny>0&&nx<GW-1&&ny<GH-1&&g[ny][nx]===0&&!seen[ny][nx]){ seen[ny][nx]=true; st.push([nx,ny]); } } }
+        if(cells.length>bestSize){ bestSize=cells.length; bestSet=cells; } } }
+    if(bestSize < GW*GH*0.26) continue;
+    const keep=g.map(r=>r.map(()=>1));
+    for(const [x,y] of bestSet) keep[y][x]=0;
+    g=keep;
+    // foothold ledges + texture
+    for(let i=0;i<Math.floor(GW*GH*0.016);i++){
+      const ty=randint(5,GH-5), tx=randint(3,GW-7);
+      if(g[ty][tx]===0 && g[ty-1][tx]===0 && g[ty+1][tx]===0){
+        const w=randint(3,5);
+        for(let k=0;k<w && tx+k<GW-2;k++){ if(g[ty][tx+k]===0 && g[ty+1][tx+k]===0) g[ty][tx+k]=2; }
+      }
+    }
+    for(let i=0;i<24;i++){ const ty=randint(3,GH-6), tx=randint(2,GW-3); if(g[ty][tx]===0 && g[ty-1][tx]===1) g[ty][tx]=3; }
+
+    // spawn = highest standable near centre
+    const standable=(x,y)=> (x>0&&y>0&&x<GW&&y<GH-1) && g[y][x]===0 && (g[y+1][x]===1||g[y+1][x]===3||g[y+1][x]===2);
+    let spawn=null; const cxc=Math.floor(GW/2);
+    outer: for(let y=2;y<GH-3;y++){ for(let off=0; off<GW; off++){ for(const x of [cxc+off,cxc-off]){ if(x>1&&x<GW-2&&standable(x,y)){ spawn={x,y}; break outer; } } } }
+    if(!spawn) continue;
+
+    // CONSTRAINT: wall off every open cell the player cannot reach from spawn
+    const R=jumpReach(g, spawn.x, spawn.y);
+    for(let y=1;y<GH;y++)for(let x=1;x<GW-1;x++){
+      if((g[y][x]===0||g[y][x]===2) && !R[y][x]) g[y][x]=1;
+    }
+    // validate: enough space + a reachable standable exit deep below spawn
+    let openCount=0, deepStand=false;
+    for(let y=1;y<GH;y++)for(let x=1;x<GW-1;x++){
+      if(g[y][x]===0||g[y][x]===2){ openCount++; if(y>spawn.y+6 && standable(x,y)) deepStand=true; }
+    }
+    if(openCount < GW*GH*0.14 || !deepStand) continue;
+
+    return {grid:g, spawn};
+  }
+  // safe fallback: a simple open box
+  const g=[]; for(let y=0;y<GH;y++){ g[y]=[]; for(let x=0;x<GW;x++) g[y][x]=(x<2||x>=GW-2||y<2||y>=GH-2)?1:0; }
+  return {grid:g, spawn:{x:Math.floor(GW/2),y:3}};
+}
+
+function tileSolid(tx,ty){ if(tx<0||ty<0||tx>=GW||ty>=GH) return true; const v=G.grid[ty][tx]; return v===1||v===3; }
+function tileOneWay(tx,ty){ if(tx<0||ty<0||tx>=GW||ty>=GH) return false; return G.grid[ty][tx]===2; }
+function solidAtPx(px,py){ return tileSolid(Math.floor(px/TILE),Math.floor(py/TILE)); }
+function openCell(minTyFromTop){
+  for(let tries=0;tries<200;tries++){
+    const ty=randint(minTyFromTop,GH-4), tx=randint(2,GW-3);
+    if(!tileSolid(tx,ty)&&!tileOneWay(tx,ty)&&!tileSolid(tx,ty+1)) return {x:tx*TILE+TILE/2,y:ty*TILE+TILE/2};
+  }
+  return null;
+}
+
+/* ---------------- box physics vs tiles ---------------- */
+function moveBox(e,dt,gravity){
+  const r=e.r;
+  if(gravity){ e.vy+=GRAV*dt; if(e.vy>MAXFALL)e.vy=MAXFALL; }
+  // sub-step so a fast fall can never skip past a thin tile
+  let remX=e.vx*dt, remY=e.vy*dt;
+  const steps=Math.max(1,Math.ceil(Math.max(Math.abs(remX),Math.abs(remY))/(TILE*0.34)));
+  let sx=remX/steps, sy=remY/steps;
+  e.hitWall=0; e.onGround=false; e.groundType=0;
+  for(let i=0;i<steps;i++){
+    // horizontal
+    if(sx!==0){
+      e.x+=sx;
+      const topT=Math.floor((e.y-r)/TILE), botT=Math.floor((e.y+r-0.01)/TILE);
+      if(sx>0){ const tx=Math.floor((e.x+r)/TILE); for(let ty=topT;ty<=botT;ty++){ if(tileSolid(tx,ty)){ e.x=tx*TILE-r-0.01; e.vx=0; e.hitWall=1; sx=0; break; } } }
+      else { const tx=Math.floor((e.x-r)/TILE); for(let ty=topT;ty<=botT;ty++){ if(tileSolid(tx,ty)){ e.x=(tx+1)*TILE+r+0.01; e.vx=0; e.hitWall=-1; sx=0; break; } } }
+    }
+    // vertical
+    if(sy!==0){
+      const oldBottom=e.y+r;
+      e.y+=sy;
+      const leftT=Math.floor((e.x-r)/TILE), rightT=Math.floor((e.x+r-0.01)/TILE);
+      if(sy>0){ const ty=Math.floor((e.y+r)/TILE);
+        for(let tx=leftT;tx<=rightT;tx++){
+          const solid=tileSolid(tx,ty);
+          const oneway=tileOneWay(tx,ty) && !(e.dropThrough>0) && oldBottom<=ty*TILE+5;
+          if(solid||oneway){ e.y=ty*TILE-r-0.01; e.vy=0; e.onGround=true; e.groundType=solid?1:2; sy=0; break; }
+        }
+      } else { const ty=Math.floor((e.y-r)/TILE);
+        for(let tx=leftT;tx<=rightT;tx++){ if(tileSolid(tx,ty)){ e.y=(ty+1)*TILE+r+0.01; e.vy=0; sy=0; break; } } }
+    }
+    if(sx===0&&sy===0) break;
+  }
+}
+
+/* ---------------- enemies ---------------- */
+function spawnEnemy(x,y,fly,ledge){
+  const f=G.floor; let e={x,y,vx:0,vy:0,fly:!!fly,mad:false,dir:rng()<.5?1:-1,bob:rng()*6,hitFlash:0,fireCD:rand(.6,2),onGround:false,dropThrough:0,
+    poison:0,poisonStacks:0,poisonT:0,slow:0,hx:x,hy:y};
+  if(fly){
+    if(f>=4 && rng()<0.5){ e.type="spitter"; e.hp=14+f*4; e.spd=70; e.dmg=1; e.r=12; e.col="#c46bff"; e.aggro=300; e.ranged=true; }
+    else { e.type="bat"; e.hp=9+f*3; e.spd=128+f*6; e.dmg=1; e.r=11; e.col="#b06bff"; e.aggro=230; }
+  } else {
+    if(f>=3 && rng()<0.4){ e.type="brute"; e.hp=42+f*11; e.spd=52+f*3; e.dmg=2; e.r=16; e.col="#c0476a"; e.aggro=170; }
+    else { e.type="crawler"; e.hp=12+f*4; e.spd=72+f*5; e.dmg=1; e.r=12; e.col="#ff6b8a"; e.aggro=195; }
+    if(ledge){ e.pmin=ledge.x0*TILE; e.pmax=(ledge.x1+1)*TILE; } else { e.pmin=2*TILE; e.pmax=(GW-2)*TILE; }
+  }
+  e.maxhp=e.hp; G.enemies.push(e);
+}
+
+function updateEnemy(e,dt){
+  const p=G.player;
+  if(e.hitFlash>0)e.hitFlash-=dt;
+  if(e.poison>0){ e.poisonT-=dt; if(e.poisonT<=0){ e.poisonT=0.5; hurtEnemy(e,e.poison); e.poisonStacks--; if(e.poisonStacks<=0)e.poison=0; } }
+  if(e.slow>0)e.slow-=dt;
+  const dx=p.x-e.x, dy=p.y-e.y, d=Math.hypot(dx,dy);
+  if(d<e.aggro) e.mad=true; else if(d>e.aggro*2.1) e.mad=false;
+  const sp=e.spd*(e.slow>0?0.5:1);
+
+  if(e.fly){
+    if(e.mad){ const a=Math.atan2(dy,dx); e.x+=Math.cos(a)*sp*dt; e.y+=Math.sin(a)*sp*dt; }
+    else { e.bob+=dt; e.x=e.hx+Math.sin(e.bob*1.2)*46; e.y=e.hy+Math.sin(e.bob*0.8)*30; }
+    // keep out of solid rock
+    if(solidAtPx(e.x,e.y)){ e.x=Math.max(3*TILE,Math.min((GW-3)*TILE,e.x)); if(solidAtPx(e.x,e.y)) e.y-=4; }
+    e.x=Math.max(TILE*1.5,Math.min(WORLD_W-TILE*1.5,e.x)); e.y=Math.max(TILE,Math.min(WORLD_H-TILE,e.y));
+    if(e.ranged){ e.fireCD-=dt; if(e.mad&&e.fireCD<=0&&d<360){ e.fireCD=1.5; const a=Math.atan2(dy,dx); G.eshots.push({x:e.x,y:e.y,vx:Math.cos(a)*4.2,vy:Math.sin(a)*4.2,r:5,dmg:e.dmg,life:3}); } }
+  } else {
+    if(e.mad){
+      // chase: walk toward player, willing to fall off ledges to reach them
+      e.dir = dx>0?1:-1; e.vx=e.dir*sp*1.35;
+      if(dy<-26 && e.onGround && Math.abs(dx)<130 && rng()<0.05) e.vy=-JUMPVEL*0.82;
+    } else {
+      // patrol: pace the ledge, reverse at walls / edges / bounds
+      e.vx=e.dir*sp;
+      const aheadX=e.x+e.dir*(e.r+4);
+      const headTy=Math.floor(e.y/TILE), footTy=Math.floor((e.y+e.r+4)/TILE), aheadTx=Math.floor(aheadX/TILE);
+      if(tileSolid(aheadTx,headTy) || e.hitWall!==0) e.dir*=-1;
+      else if(!tileSolid(aheadTx,footTy)&&!tileOneWay(aheadTx,footTy)) e.dir*=-1;
+      else if(aheadX<e.pmin||aheadX>e.pmax) e.dir*=-1;
+    }
+    moveBox(e,dt,true);
+  }
+  // contact damage
+  if(Math.abs(p.x-e.x)<p.r+e.r-2 && Math.abs(p.y-e.y)<p.r+e.r-2) damagePlayer(e.dmg);
+}
+
+/* ---------------- firing & fuse ---------------- */
+function tryFire(){
+  const p=G.player,w=p.weapon,d=w.def,now=G.t*1000;
+  if(now-w.lastFire<d.rate) return;
+  w.lastFire=now;
+  const ax=p.aimx, ay=p.aimy, base=Math.atan2(ay,ax), pellets=d.pellets||1;
+  for(let i=0;i<pellets;i++){
+    let a=base;
+    if(d.spread) a+=(i-(pellets-1)/2)*(d.spread/Math.max(1,pellets-1));
+    if(pellets>1&&!d.spread) a+=rand(-0.15,0.15);
+    const vx=Math.cos(a)*d.spd, vy=Math.sin(a)*d.spd;
+    G.shots.push({x:p.x+ax*(PLAYER_R+4),y:p.y+ay*(PLAYER_R+4),vx,vy,dmg:d.dmg,r:d.r,col:d.col,
+      bounce:d.bounce||0,pierce:!!d.pierce,poison:d.poison||0,slow:d.slow||0,leech:d.leech||0,
+      aoe:d.aoe||0,cloud:!!d.cloud,boomer:!!d.boomer,life:d.boomer?0.85:2.2,t0:G.t,hit:new Set()});
+  }
+  // shooting downward in the air gives a little hover-recoil (helps survive long falls)
+  if(ay>0.55 && !p.onGround) p.vy=Math.max(p.vy-70,-150);
+  if(d.fuse<9999){ w.charge--; if(w.charge<=0) triggerFuse(); }
+}
+
+function triggerFuse(){
+  const p=G.player, oldDef=p.weapon.def;
+  if(p.queue.length){
+    // a curse is queued → clean handoff, NO damage
+    const nd=p.queue.shift(); equipWeapon(nd);
+    spawnBlast(p.x,p.y,40,nd.col); G.shake=7;
+    flash("NEXT → "+nd.name.toUpperCase(),nd.col);
+  } else {
+    // nothing queued → the curse backfires: it BITES, then conjures a fresh AI weapon
+    let violent=0.5; if(hasUnlock("recycler")) violent-=0.30;
+    if(rng()<violent){
+      spawnBlast(p.x,p.y,90,"#ff3b6b"); G.shake=16; damagePlayer(2,true);
+      p.vy=-330; p.vx+=rand(-160,160);
+      for(const e of G.enemies){ if(Math.hypot(e.x-p.x,e.y-p.y)<90) hurtEnemy(e,40); }
+    } else { spawnBlast(p.x,p.y,52,oldDef.col); G.shake=10; damagePlayer(1,true); }
+    if(p.hp>0){ const nd=nextMutationWeapon(oldDef); equipWeapon(nd);
+      spawnBlast(p.x,p.y,46,nd.col); flash("CONJURED → "+nd.name.toUpperCase(),nd.col); requestAIRefill(); }
+  }
+}
+function spawnBlast(x,y,r,col){G.blasts.push({x,y,r,cur:0,col,life:0.3,t:0});}
+
+/* ---------------- damage ---------------- */
+function damagePlayer(n,fromSelf){
+  const p=G.player;
+  if(!fromSelf && p.invuln>0) return;
+  p.hp-=n; p.invuln=0.9; p.hitFlash=0.25; G.shake=Math.max(G.shake,9);
+  if(p.hp<=0){ p.hp=0; endRun(false); }
+}
+function hurtEnemy(e,dmg){
+  e.hp-=dmg; e.hitFlash=0.12;
+  if(e.hp<=0){
+    G.kills++;
+    let g=randint(2,6)+Math.floor(G.floor*0.6); if(hasUnlock("haggler")) g=Math.round(g*1.5);
+    G.gold+=g; SAVE.gold=(SAVE.gold||0)+g;
+    for(let i=0;i<6;i++) G.parts.push({x:e.x,y:e.y,vx:rand(-70,70),vy:rand(-90,30),life:rand(.3,.6),col:e.col,r:rand(2,4),grav:true});
+    if(rng()<0.12) G.pickups.push({x:e.x,y:e.y,def:randomWeaponDef(G.player.weapon.def),t:0,vy:0});
+    const i=G.enemies.indexOf(e); if(i>=0) G.enemies.splice(i,1);
+  }
+}
+function areaHit(x,y,r,dmg,col){ spawnBlast(x,y,r,col); for(const e of G.enemies){ if(Math.hypot(e.x-x,e.y-y)<r+e.r) hurtEnemy(e,dmg); } }
+function applyPoison(e,a){ e.poison=a; e.poisonStacks=(e.poisonStacks||0)+3; e.poisonT=e.poisonT||0.5; }
+function spawnCloud(x,y,d){ G.clouds.push({x,y,r:42,dmg:d||4,life:2.6,tick:0.2}); }
+
+/* ---------------- update ---------------- */
+function update(dt){
+  G.t+=dt;
+  const p=G.player;
+  if(p.invuln>0)p.invuln-=dt;
+  if(p.hitFlash>0)p.hitFlash-=dt;
+  if(p.squash>0)p.squash-=dt;
+  if(G.shake>0)G.shake=Math.max(0,G.shake-dt*40);
+  if(G.descendCD>0)G.descendCD-=dt;
+
+  /* ---- player input ---- */
+  let dir=0; if(keys["a"]||keys["arrowleft"])dir-=1; if(keys["d"]||keys["arrowright"])dir+=1;
+  const target=dir*MOVE;
+  p.vx += (target-p.vx)*Math.min(1,18*dt);
+  if(dir!==0)p.facing=dir;
+
+  const jumpHeld = keys[" "]||keys["arrowup"];
+  if(jumpHeld && !p.prevJump) p.jumpBuf=JUMPBUF;
+  p.prevJump=jumpHeld;
+  if(p.jumpBuf>0)p.jumpBuf-=dt;
+  const wasGround=p.onGround;
+  const canCoyote=(G.t-p.lastGround)<COYOTE;
+  // walked off a ledge without jumping → forfeit the grounded jump, keep one air jump
+  if(!p.onGround && !canCoyote && p.jumps>=2) p.jumps=1;
+  if(p.jumpBuf>0){
+    if(p.onGround||canCoyote){ p.vy=-JUMPVEL; p.jumps=1; p.jumpBuf=0; p.lastGround=-9; }   // ground jump
+    else if(p.jumps>0){                                                                    // DOUBLE JUMP
+      p.vy=-JUMPVEL*0.94; p.jumps=0; p.jumpBuf=0; p.squash=0.10;
+      spawnBlast(p.x,p.y+p.r*0.5,20,"#b9ff3d");
+      for(let i=0;i<8;i++) G.parts.push({x:p.x,y:p.y+p.r,vx:rand(-70,70),vy:rand(-10,70),life:.3,col:"#b9ff3d",r:2,grav:false});
+    }
+  }
+  if(!jumpHeld && p.vy<0) p.vy*=0.86;   // variable jump height
+
+  const down=keys["s"]||keys["arrowdown"];
+  if(down && p.onGround && p.groundType===2) p.dropThrough=0.18;
+  if(p.dropThrough>0)p.dropThrough-=dt;
+
+  moveBox(p,dt,true);
+  if(p.onGround){ if(!wasGround && p.vy===0)p.squash=0.12; p.jumps=2; p.lastGround=G.t; }
+
+  /* ---- aim & fire ---- */
+  if(G.t-mouse.lastMove<0.6){
+    const wx=p.x-_camx, wy=p.y-_camy;
+    const a=Math.atan2(mouse.y-wy,mouse.x-wx); p.aimx=Math.cos(a); p.aimy=Math.sin(a);
+  } else if(down){ p.aimx=0; p.aimy=1; }
+  else if(dir!==0){ p.aimx=p.facing; p.aimy=0; }
+  else { p.aimx=p.facing; p.aimy=0; }
+  if(mouse.down||keys["k"]) tryFire();
+
+  /* ---- pickups ---- */
+  for(let i=G.pickups.length-1;i>=0;i--){
+    const pk=G.pickups[i]; pk.t+=dt;
+    // settle pickups onto ground
+    pk.vy=(pk.vy||0)+GRAV*0.4*dt; pk.y+=pk.vy*dt;
+    if(solidAtPx(pk.x,pk.y+12)||tileOneWay(Math.floor(pk.x/TILE),Math.floor((pk.y+12)/TILE))){ pk.vy=0; pk.y=Math.floor((pk.y+12)/TILE)*TILE-12; }
+    if(Math.abs(pk.x-p.x)<p.r+12 && Math.abs(pk.y-p.y)<p.r+14){
+      if(p.queue.length<3){ p.queue.push(pk.def); flash("STOCKED · "+pk.def.name.toUpperCase()+" ("+p.queue.length+"/3)", pk.def.col); }
+      else { equipWeapon(pk.def); flash("SWAPPED → "+pk.def.name.toUpperCase(), pk.def.col); }   // queue full → instant switch
+      G.pickups.splice(i,1);
+    }
+  }
+
+  /* ---- the way down opens only when cleared ---- */
+  if(!G.stairsOpen && G.enemies.length===0){ G.stairsOpen=true; flash("THE WAY DOWN OPENS","#b9ff3d"); G.shake=Math.max(G.shake,6); }
+  if(G.stairsOpen && G.descendCD<=0 && Math.abs(G.exit.x-p.x)<22 && Math.abs(G.exit.y-p.y)<28){
+    reachExit(); return;
+  }
+
+  /* ---- player shots ---- */
+  for(let i=G.shots.length-1;i>=0;i--){
+    const s=G.shots[i];
+    if(s.boomer){ const age=G.t-s.t0; if(age>0.42){ const a=Math.atan2(p.y-s.y,p.x-s.x), sp=Math.hypot(s.vx,s.vy); s.vx=Math.cos(a)*sp; s.vy=Math.sin(a)*sp; } }
+    let nx=s.x+s.vx*dt*60, ny=s.y+s.vy*dt*60;
+    if(solidAtPx(nx,ny)){
+      if(s.bounce>0){ if(solidAtPx(nx,s.y))s.vx*=-1; if(solidAtPx(s.x,ny))s.vy*=-1; s.bounce--; nx=s.x+s.vx*dt*60; ny=s.y+s.vy*dt*60; }
+      else { if(s.aoe)areaHit(s.x,s.y,s.aoe,s.dmg,s.col); if(s.cloud)spawnCloud(s.x,s.y,s.poison); G.shots.splice(i,1); continue; }
+    }
+    s.x=nx;s.y=ny;s.life-=dt;
+    if(s.boomer&&(G.t-s.t0)>0.42&&Math.hypot(s.x-p.x,s.y-p.y)<14){G.shots.splice(i,1);continue;}
+    let killed=false;
+    for(const e of G.enemies){
+      if(s.hit.has(e))continue;
+      if(Math.hypot(e.x-s.x,e.y-s.y)<e.r+s.r){
+        if(s.aoe) areaHit(s.x,s.y,s.aoe,s.dmg,s.col); else hurtEnemy(e,s.dmg);
+        if(s.poison)applyPoison(e,s.poison);
+        if(s.slow)e.slow=Math.max(e.slow,s.slow);
+        if(s.leech){ p.leechAcc=(p.leechAcc||0)+s.leech*0.34; if(p.leechAcc>=1){ const add=Math.floor(p.leechAcc); p.hp=Math.min(p.maxHp,p.hp+add); p.leechAcc-=add; } }
+        if(s.cloud)spawnCloud(s.x,s.y,s.poison);
+        if(s.pierce)s.hit.add(e); else {killed=true;break;}
+      }
+    }
+    if(killed||s.life<=0){ if(!killed&&s.cloud)spawnCloud(s.x,s.y,s.poison); G.shots.splice(i,1); }
+  }
+
+  /* ---- enemies ---- */
+  for(const e of G.enemies) updateEnemy(e,dt);
+
+  /* ---- enemy shots ---- */
+  for(let i=G.eshots.length-1;i>=0;i--){
+    const s=G.eshots[i]; s.x+=s.vx*dt*60; s.y+=s.vy*dt*60; s.life-=dt;
+    if(solidAtPx(s.x,s.y)||s.life<=0){G.eshots.splice(i,1);continue;}
+    if(Math.abs(s.x-p.x)<p.r+s.r&&Math.abs(s.y-p.y)<p.r+s.r){damagePlayer(s.dmg);G.eshots.splice(i,1);}
+  }
+  /* ---- clouds / blasts / particles / drips ---- */
+  for(let i=G.clouds.length-1;i>=0;i--){const c=G.clouds[i];c.life-=dt;c.tick-=dt;if(c.tick<=0){c.tick=0.45;for(const e of G.enemies)if(Math.hypot(e.x-c.x,e.y-c.y)<c.r)hurtEnemy(e,c.dmg);}if(c.life<=0)G.clouds.splice(i,1);}
+  for(let i=G.blasts.length-1;i>=0;i--){const b=G.blasts[i];b.t+=dt;b.cur=b.r*(b.t/b.life);if(b.t>=b.life)G.blasts.splice(i,1);}
+  for(let i=G.parts.length-1;i>=0;i--){const q=G.parts[i];if(q.grav)q.vy+=GRAV*0.4*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;q.vx*=0.96;q.life-=dt;if(q.life<=0)G.parts.splice(i,1);}
+  if(rng()<0.25){ G.drips.push({x:_camx+rand(0,VW),y:_camy-10,vy:rand(120,260),life:2}); }
+  for(let i=G.drips.length-1;i>=0;i--){const d=G.drips[i];d.y+=d.vy*dt;d.life-=dt;if(d.life<=0||d.y>_camy+VH+20)G.drips.splice(i,1);}
+}
+
+/* ---------------- camera ---------------- */
+let _camx=0,_camy=0;
+function updateCam(){
+  const p=G.player;
+  let tx=p.x-VW/2, ty=p.y-VH*0.42;     // bias view downward so you see what's below
+  if(WORLD_W<VW) tx=(WORLD_W-VW)/2; else tx=Math.max(0,Math.min(tx,WORLD_W-VW));
+  if(WORLD_H<VH) ty=(WORLD_H-VH)/2; else ty=Math.max(0,Math.min(ty,WORLD_H-VH));
+  _camx+= (tx-_camx)*Math.min(1,12*0.016); _camy+=(ty-_camy)*Math.min(1,12*0.016);
+}
+
+/* ---------------- render ---------------- */
+function hsh(x,y){let n=((x*73856093)^(y*19349663))>>>0;return (n%1000)/1000;}
+function render(){
+  updateCam();
+  // background: cave gradient + vignette
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,"#0d0b17"); g.addColorStop(1,"#070510");
+  ctx.fillStyle=g; ctx.fillRect(0,0,VW,VH);
+
+  let ox=-_camx, oy=-_camy;
+  if(G.shake>0){ ox+=rand(-G.shake,G.shake); oy+=rand(-G.shake,G.shake); }
+  ctx.save(); ctx.translate(ox,oy);
+
+  // background drips (behind tiles)
+  ctx.strokeStyle="rgba(120,150,180,0.10)"; ctx.lineWidth=1;
+  for(const d of G.drips){ ctx.beginPath(); ctx.moveTo(d.x,d.y); ctx.lineTo(d.x,d.y+8); ctx.stroke(); }
+
+  const x0=Math.max(0,Math.floor(_camx/TILE)-1), x1=Math.min(GW,Math.ceil((_camx+VW)/TILE)+1);
+  const y0=Math.max(0,Math.floor(_camy/TILE)-1), y1=Math.min(GH,Math.ceil((_camy+VH)/TILE)+1);
+  for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+    const v=G.grid[y][x], px=x*TILE, py=y*TILE;
+    if(v===1||v===3){
+      const t=hsh(x,y);
+      ctx.fillStyle = t<0.5? "#171522" : (t<0.82? "#14121d":"#1b1828");
+      ctx.fillRect(px,py,TILE+1,TILE+1);
+      // speckle
+      if(t>0.7){ ctx.fillStyle="rgba(0,0,0,0.25)"; ctx.fillRect(px+TILE*t*0.5,py+TILE*(1-t)*0.6,3,3); }
+      // rim light where open above
+      if(y>0 && G.grid[y-1][x]===0){ ctx.fillStyle="rgba(185,255,61,0.10)"; ctx.fillRect(px,py,TILE,3); }
+      // stalactite nub where open below
+      if(y<GH-1 && G.grid[y+1][x]===0 && t>0.55){
+        ctx.fillStyle="#100e18"; ctx.beginPath(); ctx.moveTo(px+TILE*0.3,py+TILE); ctx.lineTo(px+TILE*0.7,py+TILE); ctx.lineTo(px+TILE*0.5,py+TILE+9); ctx.closePath(); ctx.fill();
+      }
+    } else if(v===2){
+      // one-way ledge
+      ctx.fillStyle="#221d33"; ctx.fillRect(px,py,TILE+1,9);
+      ctx.fillStyle="rgba(185,255,61,0.55)"; ctx.fillRect(px,py,TILE+1,2);
+      ctx.fillStyle="rgba(0,0,0,0.3)"; ctx.fillRect(px,py+9,TILE+1,2);
+    }
+  }
+
+  // exit (only when cleared)
+  if(G.stairsOpen){
+    const e=G.exit, pulse=0.5+0.5*Math.sin(G.t*4);
+    ctx.fillStyle=`rgba(185,255,61,${0.16+pulse*0.18})`; ctx.beginPath(); ctx.arc(e.x,e.y,24,0,7); ctx.fill();
+    ctx.fillStyle="#b9ff3d"; ctx.font="bold 30px 'Space Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("▼",e.x,e.y+1);
+  }
+
+  // pickups
+  for(const pk of G.pickups){ const fl=0.6+0.4*Math.sin(G.t*5+pk.t);
+    ctx.save();ctx.translate(pk.x,pk.y);ctx.rotate(Math.PI/4);
+    ctx.fillStyle=`rgba(185,255,61,${0.12*fl})`;ctx.fillRect(-15,-15,30,30);
+    ctx.strokeStyle=pk.def.col;ctx.lineWidth=2;ctx.strokeRect(-9,-9,18,18);ctx.restore();
+    ctx.fillStyle=pk.def.col;ctx.font="16px 'Space Mono',monospace";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(pk.def.glyph,pk.x,pk.y+1);
+  }
+
+  // clouds
+  for(const c of G.clouds){ ctx.fillStyle=`rgba(123,217,107,${0.10*(c.life/2.6)})`; ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,7); ctx.fill(); }
+  // enemy shots
+  for(const s of G.eshots){ ctx.fillStyle="#c46bff"; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,7); ctx.fill(); }
+
+  // enemies
+  for(const e of G.enemies){
+    ctx.fillStyle=e.hitFlash>0?"#fff":e.col;
+    if(e.type==="brute"){ ctx.fillRect(e.x-e.r,e.y-e.r,e.r*2,e.r*2); }
+    else if(e.type==="crawler"){ ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,7); ctx.fill(); ctx.fillStyle="#0b0a12"; ctx.fillRect(e.x+e.dir*3-2,e.y-3,4,4); }
+    else if(e.type==="bat"){ ctx.beginPath(); ctx.moveTo(e.x,e.y-e.r); ctx.lineTo(e.x+e.r,e.y+e.r*0.6); ctx.lineTo(e.x-e.r,e.y+e.r*0.6); ctx.closePath(); ctx.fill(); }
+    else { ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.PI/4);ctx.fillRect(-e.r*0.8,-e.r*0.8,e.r*1.6,e.r*1.6);ctx.restore(); }
+    if(e.mad){ ctx.strokeStyle="rgba(255,59,107,0.6)"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(e.x,e.y,e.r+4,0,7); ctx.stroke(); }
+    if(e.hp<e.maxhp){ const w=e.r*2; ctx.fillStyle="#000"; ctx.fillRect(e.x-e.r,e.y-e.r-7,w,3); ctx.fillStyle="#ff6b8a"; ctx.fillRect(e.x-e.r,e.y-e.r-7,w*(e.hp/e.maxhp),3); }
+  }
+
+  // player shots
+  for(const s of G.shots){ ctx.fillStyle=s.col; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,7); ctx.fill(); ctx.fillStyle="rgba(255,255,255,0.5)"; ctx.beginPath(); ctx.arc(s.x,s.y,s.r*0.45,0,7); ctx.fill(); }
+  // blasts
+  for(const b of G.blasts){ ctx.strokeStyle=b.col; ctx.globalAlpha=1-(b.t/b.life); ctx.lineWidth=4; ctx.beginPath(); ctx.arc(b.x,b.y,b.cur,0,7); ctx.stroke(); ctx.globalAlpha=1; }
+  // particles
+  for(const q of G.parts){ ctx.globalAlpha=Math.max(0,q.life*2); ctx.fillStyle=q.col; ctx.fillRect(q.x-q.r,q.y-q.r,q.r*2,q.r*2); ctx.globalAlpha=1; }
+
+  // player
+  const p=G.player, blink=p.invuln>0&&(Math.floor(G.t*20)&1);
+  if(!blink){
+    const sq=p.squash>0? 1+ (0.12*(p.squash/0.12)) : 1;
+    ctx.save(); ctx.translate(p.x,p.y); ctx.scale(sq,2-sq);
+    ctx.fillStyle=p.hitFlash>0?"#fff":"#e8e2d0"; ctx.beginPath(); ctx.arc(0,0,PLAYER_R,0,7); ctx.fill();
+    ctx.fillStyle=p.weapon.def.col; ctx.beginPath(); ctx.arc(0,0,PLAYER_R*0.5,0,7); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle=p.weapon.def.col; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+p.aimx*(PLAYER_R+9),p.y+p.aimy*(PLAYER_R+9)); ctx.stroke();
+  }
+
+  ctx.restore();
+  // vignette
+  const vg=ctx.createRadialGradient(VW/2,VH/2,VH*0.3,VW/2,VH/2,VH*0.8);
+  vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(0,0,0,0.45)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,VW,VH);
+  drawHUD();
+}
+
+/* ---------------- HUD ---------------- */
+const elHp=document.getElementById("hpfill"),elFloor=document.getElementById("floorN"),elGold=document.getElementById("goldN"),
+      elScore=document.getElementById("scoreN"),elWname=document.getElementById("wname"),elWsub=document.getElementById("wsub"),
+      elFuseFill=document.getElementById("fusefill"),elFuseLabel=document.getElementById("fuselabel"),elFuseWrap=document.getElementById("fusewrap"),
+      elModeTag=document.getElementById("modeTag"),elEnemies=document.getElementById("enemiesN"),elQueue=document.getElementById("queueRow");
+function drawHUD(){
+  const p=G.player,w=p.weapon,d=w.def;
+  elHp.style.width=Math.max(0,p.hp/p.maxHp*100)+"%";
+  elFloor.textContent=G.floor; elGold.textContent=(SAVE.gold||0);
+  G.score=G.floor*120+G.kills*10+G.gold; elScore.textContent=G.score;
+  // inventory queue (next-up curses)
+  let qh="";
+  for(let i=0;i<3;i++){ const q=p.queue[i];
+    qh += q ? `<div class="qslot filled" style="color:${q.col}">${q.glyph}</div>` : `<div class="qslot">·</div>`; }
+  elQueue.innerHTML=qh;
+  elModeTag.textContent=G.daily?"◈ DAILY CURSE":"";
+  const left=G.enemies.length;
+  elEnemies.textContent=left>0?("Enemies left: "+left):"✓ Floor clear — drop to ▼";
+  elEnemies.style.color=left>0?"var(--blood)":"var(--curse)";
+  elWname.textContent=d.name; elWsub.textContent=(d._ai?"✦ conjured · ":"")+d.sub; elWsub.style.color=d._ai?"var(--curse)":"var(--muted)";
+  if(d.fuse>=9999){ elFuseFill.style.transform="scaleX(1)"; elFuseLabel.textContent="NO FUSE · UNSTABLE EMBER"; elFuseWrap.classList.remove("fuse-danger","fuse-shake"); }
+  else{ const frac=Math.max(0,Math.min(1,w.charge/d.fuse)); elFuseFill.style.transform="scaleX("+frac+")"; elFuseLabel.textContent="FUSE "+Math.max(0,w.charge)+" / "+d.fuse;
+    const danger=w.charge<=Math.max(2,d.fuse*0.25); elFuseWrap.classList.toggle("fuse-danger",danger); elFuseWrap.classList.toggle("fuse-shake",w.charge<=2); }
+}
+
+/* ---------------- flash ---------------- */
+const elFlash=document.getElementById("flashMsg"); let flashT=0;
+function flash(t,c){ elFlash.textContent=t; elFlash.style.color=c||"#e8e2d0"; elFlash.style.opacity=1; flashT=1.1; }
+function tickFlash(dt){ if(flashT>0){ flashT-=dt; elFlash.style.opacity=Math.min(1,flashT*1.6); } }
+
+/* ---------------- loop ---------------- */
+function frame(ts){ requestAnimationFrame(frame); if(!running)return; let dt=(ts-lastT)/1000; lastT=ts; if(dt>0.05)dt=0.05; if(!paused){ update(dt); tickFlash(dt); render(); } }
+requestAnimationFrame(ts=>{lastT=ts;requestAnimationFrame(frame);});
+
+/* ---------------- run lifecycle ---------------- */
+function startRun(daily){ newGame(daily); _camx=G.player.x-VW/2; _camy=G.player.y-VH*0.42; running=true; paused=false; document.getElementById("hud").classList.remove("hidden"); hideAllScreens(); cv.focus(); }
+function endRun(){
+  if(!running) return;
+  running=false; SAVE.runs++;
+  if(G.floor>SAVE.deepest)SAVE.deepest=G.floor;
+  let newU=null; for(const u of UNLOCKS){ if(SAVE.deepest>=u.floor&&!hasUnlock(u.id)){ SAVE.unlocks.push(u.id); newU=newU||u; } }
+  if(G.daily){ const k=dailyKey(),prev=SAVE.daily[k]||0; if(G.score>prev)SAVE.daily[k]=G.score; }
+  writeSave(SAVE); showSummary(newU);
+}
+
+/* ---------------- screens ---------------- */
+const titleScreen=document.getElementById("titleScreen"),pauseScreen=document.getElementById("pauseScreen"),summaryScreen=document.getElementById("summaryScreen"),
+      crossScreen=document.getElementById("crossScreen"),shopScreen=document.getElementById("shopScreen");
+function hideAllScreens(){ for(const s of [titleScreen,pauseScreen,summaryScreen,crossScreen,shopScreen]) s.classList.add("hidden"); }
+function showSummary(newU){
+  document.getElementById("hud").classList.add("hidden"); summaryScreen.classList.remove("hidden");
+  document.getElementById("sumHead").textContent="The hex took you";
+  document.getElementById("sumFloor").textContent="DEPTH "+G.floor;
+  document.getElementById("sumKills").textContent=G.kills; document.getElementById("sumGold").textContent=G.gold; document.getElementById("sumScore").textContent=G.score;
+  const pop=document.getElementById("unlockPop");
+  if(newU){pop.classList.remove("hidden");pop.textContent="★ UNLOCKED: "+newU.name+" — "+newU.desc;} else pop.classList.add("hidden");
+  const nx=nextUnlock(),nt=document.getElementById("nextTxt");
+  if(nx) nt.innerHTML=`Next unlock at <b>Depth ${nx.floor}</b>: <b>${nx.name}</b> — ${nx.desc} You reached Depth ${G.floor}. One more push.`;
+  else nt.innerHTML=`Every curse in the ledger is yours. Now it's pure score — deepest is <b>Depth ${SAVE.deepest}</b>. Beat it.`;
+  document.getElementById("sumLedger").innerHTML=`Runs: ${SAVE.runs} · Deepest ever: Depth ${SAVE.deepest} · ${G.daily?("Daily best today: "+(SAVE.daily[dailyKey()]||G.score)):"A fresh Daily Curse drops at midnight — new seed, new starting weapon."}`;
+}
+function dailyWeaponId(){const r=mulberry32(dailySeed()+777);return WEAPONS[Math.floor(r()*WEAPONS.length)].id;}
+function refreshTitle(){
+  const dw=WEAPONS.find(w=>w.id===dailyWeaponId());
+  document.getElementById("dailyName").textContent=dw.name+" start";
+  const best=SAVE.daily[dailyKey()];
+  document.getElementById("dailyPB").textContent=best?("Best today: "+best+" pts"):"Best today: not run yet";
+  document.getElementById("bankGold").textContent=SAVE.gold||0;
+  const nx=nextUnlock();
+  document.getElementById("ledgerLine").innerHTML=SAVE.runs>0
+    ? `Deepest descent: <b style="color:var(--curse)">Depth ${SAVE.deepest}</b> over ${SAVE.runs} runs · ${nx?("next unlock at Depth "+nx.floor):"all curses unlocked"}`
+    : `First descent. Survive it and you unlock your first curse.`;
+}
+
+/* ---------------- descent gating + crossroads ---------------- */
+function isShopDepth(n){ return n===3 || n===5 || n===10 || (n>10 && (n-10)%2===0); }
+function reachExit(){ if(isShopDepth(G.floor)) openCrossroads(); else goDeeper(); }
+function goDeeper(){
+  G.floor++; G.player.hp=Math.min(G.player.maxHp,G.player.hp+1);
+  buildFloor();
+  paused=false; hideAllScreens(); document.getElementById("hud").classList.remove("hidden"); cv.focus();
+}
+function openCrossroads(){
+  paused=true; document.getElementById("hud").classList.add("hidden");
+  document.getElementById("crossDepth").textContent="DEPTH "+G.floor+" CLEARED";
+  document.getElementById("crossGold").textContent=SAVE.gold||0;
+  hideAllScreens(); crossScreen.classList.remove("hidden");
+}
+
+/* ---------------- shop ---------------- */
+let shopContext="menu", shopStock=[], shopBought=false;
+function priceOf(def){
+  let p=18 + Math.round(def.dmg*1.7) + Math.round((600-def.rate)/12);
+  if(def.aoe)p+=28; if(def.pierce)p+=22; if(def.pellets)p+=20; if(def.poison)p+=14;
+  if(def.cloud)p+=18; if(def.boomer)p+=16; if(def.leech)p+=22; if(def.slow)p+=14; if(def.bounce)p+=10;
+  return Math.max(20, Math.round(p/5)*5);
+}
+function rollShopStock(){
+  const pool=[...WEAPONS]; shopStock=[];
+  for(let i=0;i<5 && pool.length;i++){ const idx=Math.floor(Math.random()*pool.length); const def=pool.splice(idx,1)[0]; shopStock.push({def,price:priceOf(def)}); }
+  shopStock.push({ai:true,price:60});   // a Mystery Curse, conjured by AI
+}
+function loadoutCount(){ return shopContext==="menu" ? pendingLoadout.length : (1 + (G?G.player.queue.length:0)); }
+function loadoutFull(){ return shopContext==="menu" ? pendingLoadout.length>=4 : (G && G.player.queue.length>=3); }
+function addToLoadout(def){
+  if(shopContext==="menu"){ if(pendingLoadout.length<4) pendingLoadout.push(def); else pendingLoadout[pendingLoadout.length-1]=def; }
+  else { if(G.player.queue.length<3) G.player.queue.push(def); else G.player.queue[G.player.queue.length-1]=def; }
+}
+function openShop(context){
+  shopContext=context; shopBought=false; rollShopStock();
+  paused=true; document.getElementById("hud").classList.add("hidden");
+  hideAllScreens(); shopScreen.classList.remove("hidden");
+  document.getElementById("shopDoneBtn").textContent = context==="run" ? "Descend Deeper ▼" : "Done";
+  document.getElementById("shopHint").textContent = context==="run"
+    ? "Buy one curse for the floors ahead. If your queue is full, it replaces the last slot."
+    : "Buy one curse to start with. If your loadout is full, it replaces the last slot.";
+  renderShop();
+}
+function statLine(d){
+  const bits=[`dmg ${d.dmg}`,`fuse ${d.fuse}`];
+  if(d.aoe)bits.push("AoE"); if(d.pierce)bits.push("pierce"); if(d.pellets)bits.push(d.pellets+"-shot");
+  if(d.poison)bits.push("poison"); if(d.cloud)bits.push("cloud"); if(d.boomer)bits.push("returns");
+  if(d.leech)bits.push("lifesteal"); if(d.slow)bits.push("slow"); if(d.bounce)bits.push("bounce");
+  return bits.join(" · ");
+}
+function renderShop(){
+  document.getElementById("shopGold").textContent=SAVE.gold||0;
+  const grid=document.getElementById("shopGrid"); grid.innerHTML="";
+  shopStock.forEach((c,i)=>{
+    const card=document.createElement("div"); card.className="card"+(c.ai?" ai":"");
+    const def=c.ai?null:c.def;
+    const name=c.ai?"Mystery Curse":def.name, glyph=c.ai?"✦":def.glyph, col=c.ai?"var(--curse)":def.col;
+    const stats=c.ai?"conjured live by AI — unknown until drawn":statLine(def);
+    const afford=(SAVE.gold||0)>=c.price;
+    card.innerHTML=`<div class="cn" style="color:${col}"><span class="cg">${glyph}</span>${name}</div>
+      <div class="cs">${stats}</div>
+      <div class="cstat">◈ ${c.price} gold</div>`;
+    const b=document.createElement("button"); b.textContent = shopBought?"one per visit":(afford?"Buy":"too costly");
+    b.disabled=shopBought||!afford; b.onclick=()=>buyCard(i);
+    card.appendChild(b); grid.appendChild(card);
+  });
+  // loadout summary
+  const lo=document.getElementById("shopLoadout");
+  if(shopContext==="menu"){
+    if(pendingLoadout.length){ lo.innerHTML=`<b>Loadout:</b> start with <b>${pendingLoadout[0].name}</b>` +
+      (pendingLoadout.length>1?` · queue: ${pendingLoadout.slice(1).map(d=>d.name).join(", ")}`:"") + ` &nbsp;(${pendingLoadout.length}/4)`; }
+    else lo.innerHTML="<b>Loadout:</b> empty — buy a curse to choose your start, or leave it to chance.";
+  } else {
+    const q=G.player.queue; lo.innerHTML=`<b>Holding:</b> ${G.player.weapon.def.name}` + (q.length?` · <b>queue:</b> ${q.map(d=>d.name).join(", ")} (${q.length}/3)`:` · queue empty`);
+  }
+  document.getElementById("shopRerollBtn").disabled=(SAVE.gold||0)<25 || shopBought;
+}
+function buyCard(i){
+  const c=shopStock[i]; if(!c || shopBought || (SAVE.gold||0)<c.price) return;
+  SAVE.gold-=c.price;
+  const def = c.ai ? nextMutationWeapon(null) : c.def;
+  addToLoadout(def);
+  shopBought=true;
+  writeSave(SAVE); renderShop();
+  if(c.ai) requestAIRefill();
+}
+function shopReroll(){ if((SAVE.gold||0)<25) return; SAVE.gold-=25; writeSave(SAVE); rollShopStock(); renderShop(); }
+function shopDone(){ if(shopContext==="run"){ goDeeper(); } else { hideAllScreens(); titleScreen.classList.remove("hidden"); refreshTitle(); } }
+
+document.getElementById("playBtn").onclick=()=>startRun(false);
+document.getElementById("dailyBtn").onclick=()=>startRun(true);
+document.getElementById("resumeBtn").onclick=()=>{paused=false;pauseScreen.classList.add("hidden");document.getElementById("hud").classList.remove("hidden");cv.focus();};
+document.getElementById("quitBtn").onclick=()=>{paused=false;endRun();};
+document.getElementById("againBtn").onclick=()=>startRun(G?G.daily:false);
+document.getElementById("menuBtn").onclick=()=>{hideAllScreens();titleScreen.classList.remove("hidden");refreshTitle();};
+document.getElementById("shopBtn").onclick=()=>openShop("menu");
+document.getElementById("crossShopBtn").onclick=()=>openShop("run");
+document.getElementById("crossDescendBtn").onclick=()=>goDeeper();
+document.getElementById("shopDoneBtn").onclick=()=>shopDone();
+document.getElementById("shopRerollBtn").onclick=()=>shopReroll();
+document.getElementById("howBtn").onclick=()=>{ const h=document.getElementById("howDetail"); h.classList.toggle("hidden"); const shown=!h.classList.contains("hidden"); document.getElementById("howBtn").textContent=(shown?"▾":"▸")+" How it works"; };
+
+/* ---------------- input ---------------- */
+window.addEventListener("keydown",e=>{
+  const k=e.key.toLowerCase(); keys[k]=true;
+  if(k===" "||k.startsWith("arrow")) e.preventDefault();
+  if(k==="p"||k==="escape"){ if(running){ paused=!paused; pauseScreen.classList.toggle("hidden",!paused); document.getElementById("hud").classList.toggle("hidden",paused);} }
+});
+window.addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;});
+cv.addEventListener("mousemove",e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;mouse.lastMove=G?G.t:0;});
+cv.addEventListener("mousedown",()=>{mouse.down=true;});
+window.addEventListener("mouseup",()=>{mouse.down=false;});
+cv.addEventListener("contextmenu",e=>e.preventDefault());
+
+document.getElementById("mobileNote").textContent=('ontouchstart'in window)?"Best on desktop with keyboard + mouse":"Tip: shoot downward in mid-air to slow your fall";
+refreshTitle();
+</script>
+</body>
+</html>
