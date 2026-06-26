@@ -3,6 +3,7 @@
 A cave-diving roguelite of **Unstable power** every weapon rides a burning fuse. Fire it dry and the next curse in your queue takes over; run empty and it backfires, costing you health and conjuring something new. You never get to keep a favourite. You adapt, or you die.
 
 ** Play https://krishnarishik.github.io/Hex/
+
 **Code:** The whole game is one self-contained `index.html`.
 
 ## Controls
